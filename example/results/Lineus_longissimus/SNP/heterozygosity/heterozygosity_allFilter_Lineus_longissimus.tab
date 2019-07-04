@@ -1,0 +1,2 @@
+#prefix	read_coverage_threshold	minor_allele_frequency_threshold	#total	#indel	#N	#variant_calling_filtered	#single	#lowCov_or_not_genotyped_filtered	#all_ind_genotyped+Cov	#monomorph	#SNP	0/0	0/1	1/1	H(obs)_allPos	H(exp)_allPos	H(obs)_allIndGT	H(exp)_allIndGT
+Lineus_longissimus	0	0.0	28171	0	0	302	27869	0	3771	0	27869	51886	35811	3881	3.91e-1	3.63e-1	2.81e-1	2.93e-1

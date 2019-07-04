@@ -1,0 +1,518 @@
+#!/usr/bin/env python
+###
+###   Author:              Yoann Anselmetti
+###   Last modification:   2019/07/03
+###
+###   Goal: Read and parse a Variant Calling Format (VCF) file to:
+###      - compute general heterozygosity statistics on population genomics data
+###      - plot Site Frequency Spectrum (SFS) with proportion of the most represented genotypes profiles for each pic (#alternative allele)
+###
+###   License: This software is distributed under the CeCILL free software license (Version 2.1 dated 2013-06-21)
+###
+
+from __future__ import print_function
+
+### Global python packages import
+from sys import argv
+from datetime import datetime
+from os import path, remove, listdir
+from collections import OrderedDict,namedtuple   #New in version 2.6
+from fnmatch import fnmatch
+from cyvcf2 import VCF
+from decimal import Decimal
+import argparse
+
+### Personnal package import
+from popcon import util, SFS_profiles_plot, heterozygosity
+
+
+def read_VCF_file(VCF_file,prefix,OUTPUT,list_read_coverage_threshold,list_MARFt,monomorph_filtering,sep,verbose):
+   list_Individuals=VCF(VCF_file).samples
+   individuals_number=len(list_Individuals)
+   dict_SNP_SFS_allPos,dict_SNP_SFS_allIndGT,dict_indel_SFS_allPos,dict_indel_SFS_allIndGT=dict(),dict(),dict(),dict()
+   dict_SNP_hetero,dict_FIS,dict_indel_hetero,dict_indel_FIS=dict(),dict(),dict(),dict()
+   dict_SNP_genotypes,dict_indel_genotypes=dict(),dict()
+   indel_position,N_position,filt_position,SNP_position,notSNP_notIndel_position=0,0,0,0,0
+   ###########
+   ### VCF file route
+   ###########
+   for variant in VCF(VCF_file):
+      ### SNP positions detected by cyvcf2
+      if variant.is_snp:
+         if 'N' in variant.REF:
+            N_position+=1
+            if verbose>1:
+               print('\t\t\tN position (SNP) =>',variant,end='')
+         ### If ((site tagged with variant caller filter) AND (script consider variant caller filtering)) OR (#alternative alleles>1)
+         elif (variant.FILTER!=None and use_variant_caller_filter) or len(variant.ALT)>1:
+            filt_position+=1
+            if verbose>1:
+               print('\t\t\tnot PASS (SNP) =>',variant,end='')
+         else:
+            SNP_position+=1
+            if verbose>1:
+               print('\t\t\tSNP position (SNP) =>',variant,end='')
+            ##########
+            ### compute SNP SFS and observed/expected heterozygosity (Site Frequency Spectrum)
+            ##########
+            dict_SNP_genotypes,dict_SNP_SFS_allPos,dict_SNP_SFS_allIndGT,dict_SNP_hetero,dict_FIS=heterozygosity.store_polymorphism(variant,list_Individuals,dict_SNP_genotypes,dict_SNP_SFS_allPos,dict_SNP_SFS_allIndGT,dict_SNP_hetero,dict_FIS,OUTPUT,'SNP',prefix,list_read_coverage_threshold,list_MARFt,False,variant_caller,write_heterozygosity_file,sep,verbose)
+
+      ### INDEL positions detected by cyvcf2
+      elif variant.is_indel:
+         if 'N' in variant.REF:
+            N_position+=1
+            if verbose>1:
+               print('\t\t\tN position (indel) =>',variant,end='')
+         ### If ((site tagged with variant caller filter that is NOT 'ambiguous') AND (script consider variant caller filtering)) OR (#alternative alleles>1) OR (#alternative alleles==0 -> monomorph position with multiple-nucleotides))
+         ### In GATK: variant.FILTER=='ambiguous' -> corresponds to ambiguous indel sites
+         elif ((variant.FILTER!=None and variant.FILTER!='ambiguous') and use_variant_caller_filter) or len(variant.ALT)>1 or len(variant.ALT)==0:
+            filt_position+=1
+            if verbose>1:
+               print('\t\t\tnot PASS (indel) =>',variant,end='')
+         else:
+            indel_position+=1
+            if verbose>1:
+               print('\t\t\tINDEL position (indel) =>',variant,end='')
+            ##########
+            ### compute indel SFS (Site Frequency Spectrum)
+            ##########
+            dict_indel_genotypes,dict_indel_SFS_allPos,dict_indel_SFS_allIndGT,dict_indel_hetero,dict_indel_FIS=heterozygosity.store_polymorphism(variant,list_Individuals,dict_indel_genotypes,dict_indel_SFS_allPos,dict_indel_SFS_allIndGT,dict_indel_hetero,dict_indel_FIS,OUTPUT,'indel',prefix,list_read_coverage_threshold,list_MARFt,True,variant_caller,write_heterozygosity_file,sep,verbose)
+
+      ### Positions that are NOT detected as SNP or INDEL by cyvcf2
+      else:
+         ### INDEL positions NOT detected by cyvcf2
+         if variant.ALT:
+            ### If site is a 'N'
+            if 'N' in variant.REF:
+               N_position+=1
+               if verbose>1:
+                  print('\t\t\tN position (indel) =>',variant,end='')
+            ### If ((site tagged with variant caller filter that is NOT 'ambiguous') AND (script consider variant caller filtering)) OR (#alternative alleles>1) OR (#alternative alleles==0 -> monomorph position with multiple-nucleotides))
+            ### In GATK: variant.FILTER=='ambiguous' -> corresponds to ambiguous indel sites
+            elif ((variant.FILTER!=None and variant.FILTER!='ambiguous') and use_variant_caller_filter) or len(variant.ALT)>1 or len(variant.ALT)==0:
+               filt_position+=1
+               if verbose>1:
+                  print('\t\t\tnot PASS (indel) =>',variant,end='')
+            # ### If site is a '-' => What does it mean???
+            # elif '-' in variant.REF:
+            #    indel_position+=1
+            #    if verbose>1:
+            #       print('\t\t\tINDEL position (snp) =>',variant,end='')
+            #       # print '\t\t\t',position,': INDEL position =>',variant.CHROM,variant.end,variant.ID,variant.REF,variant.ALT,variant.QUAL,variant.FILTER#,variant.INFO,variant.FORMAT
+            #    ##########
+            #    ### compute indel SFS (Site Frequency Spectrum)
+            #    ##########
+            #    dict_indel_genotypes,dict_indel_SFS_allPos,dict_indel_SFS_allIndGT,dict_indel_hetero,dict_indel_FIS=heterozygosity.store_polymorphism(variant,list_Individuals,dict_indel_genotypes,dict_indel_SFS_allPos,dict_indel_SFS_allIndGT,dict_indel_hetero,dict_indel_FIS,OUTPUT,'indel',prefix,list_read_coverage_threshold,list_MARFt,True,variant_caller,write_heterozygosity_file,sep,verbose)
+
+         ### MONOMORPH positions
+         else:
+            if not monomorph_filtering:
+               ### If site is a 'N'
+               if 'N' in variant.REF:
+                  N_position+=1
+                  if verbose>1:
+                     print('\t\t\tN position (monomorph) =>',variant,end='')
+               ### If ((site tagged with variant caller filter) AND (script consider variant caller filtering)) OR (#alternative alleles>1)
+               elif (variant.FILTER!=None and use_variant_caller_filter) or len(variant.ALT)>1:
+                  filt_position+=1
+                  if verbose>1:
+                     print('\t\t\tnot PASS (monomorph) =>',variant,end='')
+               else:
+                  SNP_position+=1
+                  if verbose>1:
+                     print('\t\t\tMONOMORPH position (monomorph) =>',variant,end='')
+                  ##########
+                  ### compute SNP SFS and observed/expected heterozygosity (Site Frequency Spectrum)
+                  ##########
+                  dict_SNP_genotypes,dict_SNP_SFS_allPos,dict_SNP_SFS_allIndGT,dict_SNP_hetero,dict_FIS=heterozygosity.store_polymorphism(variant,list_Individuals,dict_SNP_genotypes,dict_SNP_SFS_allPos,dict_SNP_SFS_allIndGT,dict_SNP_hetero,dict_FIS,OUTPUT,'SNP',prefix,list_read_coverage_threshold,list_MARFt,False,variant_caller,write_heterozygosity_file,sep,verbose)
+
+   if verbose>0:
+      print('\n### HETEROZYGOSITY STATISTICS for prefix '+prefix+':')
+      tot_position=indel_position+N_position+filt_position+SNP_position
+      print('\tOn the',tot_position,'sites analyzed:')
+      print('\t\t-',indel_position,'are indel positions considered to compute indels SFS')
+      print('\t\t-',N_position,'corresponds to a \'N\'')
+      print('\t\t-',filt_position,'have been filter during variant calling')
+      print('\t\t-',SNP_position,'are single positions (SNP/monomorph) considered to compute observed/expected heterozygosity and SNP SFS')
+
+   ### Print SNP and indel SFS distributions
+   if verbose>2:
+      print('\nSNP SFS for positions with all individuals genotyped:')
+      for allele in dict_SNP_SFS_allIndGT:
+         print('\t',allele,dict_SNP_SFS_allIndGT[allele])
+      print('\nSNP SFS for all positions:')
+      for allele in dict_SNP_SFS_allPos:
+         print('\t',allele,dict_SNP_SFS_allPos[allele])
+      print('\nIndel SFS for positions with all individuals genotyped:')
+      for allele in dict_indel_SFS_allIndGT:
+         print('\t',allele,dict_indel_SFS_allIndGT[allele])
+      print('\nIndel SFS for all positions:')
+      for allele in dict_indel_SFS_allPos:
+         print('\t',allele,dict_indel_SFS_allPos[allele])
+
+   ###############
+   ### Create dict(): dict__SNP_FIS -> readable by plot_write_SFS()
+   ###############
+   dict_FIS_allPos,dict_FIS_allIndGT=dict(),dict()
+   if dict_FIS:
+      for read_coverage_threshold in dict_FIS:
+         if not read_coverage_threshold in dict_FIS_allPos:
+            dict_FIS_allPos[read_coverage_threshold]=dict()
+            dict_FIS_allIndGT[read_coverage_threshold]=dict()
+         for MARFt in dict_FIS[read_coverage_threshold]:
+            nofilt_obs=dict_FIS[read_coverage_threshold][MARFt].nfobs
+            nofilt_exp=dict_FIS[read_coverage_threshold][MARFt].nfexp
+            filt_obs=dict_FIS[read_coverage_threshold][MARFt].fobs
+            filt_exp=dict_FIS[read_coverage_threshold][MARFt].fexp
+            if nofilt_exp:
+               dict_FIS_allPos[read_coverage_threshold][MARFt]=format((nofilt_exp-nofilt_obs)/nofilt_exp,'.2e')
+            else:
+               dict_FIS_allPos[read_coverage_threshold][MARFt]="N/A"
+            if filt_exp:
+               dict_FIS_allIndGT[read_coverage_threshold][MARFt]=format((filt_exp-filt_obs)/filt_exp,'.2e')
+            else:
+               dict_FIS_allIndGT[read_coverage_threshold][MARFt]="N/A"
+
+   ##########
+   ### Compute and write SNP heterozygosity
+   ########## 
+   dictHETERO_SNP_allPos,dictHETERO_SNP_allIndGT=dict(),dict()
+   if dict_SNP_hetero:
+      dictHETERO_SNP_allPos,dictHETERO_SNP_allIndGT=write_heterozygosity_summary(dict_FIS_allIndGT,dict_FIS_allPos,dict_SNP_hetero,prefix,OUTPUT+'/SNP',tot_position,indel_position,N_position,filt_position,SNP_position)
+
+   # return individuals_number,dict_SNP_genotypes,dict_indel_genotypes,dict_SNP_SFS_allPos,dict_indel_SFS_allPos,dictHETERO_SNP_allPos,dict_FIS_allPos,dict_SNP_SFS_allIndGT,dict_indel_SFS_allIndGT,dictHETERO_SNP_allIndGT,dict_FIS_allIndGT
+   return individuals_number,dict_SNP_genotypes,dict_indel_genotypes
+
+
+########
+### ONLY for SNP positions
+########
+def write_heterozygosity_summary(dict_FIS_allIndGT,dict_FIS_allPos,dict_hetero,prefix,OUTPUT,tot_position,indel_position,N_position,filt_position,SNP_position):
+   dictHETERO_allPos,dictHETERO_allIndGT=dict(),dict()
+   output_dir=OUTPUT+'/heterozygosity'
+   util.mkdir_p(output_dir)
+   output_file_allfilt=open(output_dir+'/heterozygosity_allFilter_'+prefix+'.tab','w')
+   output_file_allfilt.write('#prefix\tread_coverage_threshold\tminor_allele_frequency_threshold\t#total\t#indel\t#N\t#variant_calling_filtered\t#single\t#lowCov_or_not_genotyped_filtered\t#all_ind_genotyped+Cov\t#monomorph\t#SNP\t0/0\t0/1\t1/1\tH(obs)_allPos\tH(exp)_allPos\tH(obs)_allIndGT\tH(exp)_allIndGT\n')
+   for read_coverage_threshold in sorted(dict_hetero):
+      dictHETERO_allPos[read_coverage_threshold],dictHETERO_allIndGT[read_coverage_threshold]=dict(),dict()
+      if verbose>0:
+         print('\n\t# For FILTER read coverage>='+str(read_coverage_threshold)+':')
+      for MARFt in sorted(dict_hetero[read_coverage_threshold]):
+         if verbose>0:
+            print('\t\t# For FILTER Minor Allele Frequency (MARF)>='+str(MARFt)+':')
+         x=dict_hetero[read_coverage_threshold][MARFt].x
+         y=dict_hetero[read_coverage_threshold][MARFt].y
+         z=dict_hetero[read_coverage_threshold][MARFt].z
+         x_allIndGT=dict_hetero[read_coverage_threshold][MARFt].x_allIndGT
+         y_allIndGT=dict_hetero[read_coverage_threshold][MARFt].y_allIndGT
+         z_allIndGT=dict_hetero[read_coverage_threshold][MARFt].z_allIndGT
+         mono=dict_hetero[read_coverage_threshold][MARFt].mono
+         snp=dict_hetero[read_coverage_threshold][MARFt].snp
+         lowCov=dict_hetero[read_coverage_threshold][MARFt].lowCov
+         pos_allIndGT=dict_hetero[read_coverage_threshold][MARFt].pos_allIndGT
+
+         FIS_allPos=dict_FIS_allPos[read_coverage_threshold][MARFt]
+         FIS_allIndGT=dict_FIS_allIndGT[read_coverage_threshold][MARFt]
+
+
+         observed_heterozygosity_allPos,expected_heterozygosity_allPos=compute_heterozygosity(x,y,z)
+         observed_heterozygosity_allIndGT,expected_heterozygosity_allIndGT=compute_heterozygosity(x_allIndGT,y_allIndGT,z_allIndGT)
+
+         output_file_allfilt.write(prefix+'\t'+str(read_coverage_threshold)+'\t'+str(MARFt)+'\t'+str(tot_position)+'\t'+str(indel_position)+'\t'+str(N_position)+'\t'+str(filt_position)+'\t'+str(SNP_position)+'\t'+str(lowCov)+'\t'+str(pos_allIndGT)+'\t'+str(mono)+'\t'+str(snp)+'\t'+str(x)+'\t'+str(y)+'\t'+str(z)+'\t'+observed_heterozygosity_allPos+'\t'+expected_heterozygosity_allPos+'\t'+observed_heterozygosity_allIndGT+'\t'+expected_heterozygosity_allIndGT+'\n')
+
+         ##########
+         ### Output screen of global heterozygosity statistics
+         ##########
+         if verbose>0:
+            print('\t\t\t- There are '+str(lowCov)+'/'+str(SNP_position)+' sites with read coverage<threshold (if read coverage threshold) OR with only individuals with \'./.\' genotype')
+            print('\t\t\t- '+str(mono)+' sites are monomorph')
+            print('\t\t\t- '+str(snp)+' sites are SNP')
+
+            print('\t\t\t- Heterozygosity without removing site with missing genotype(s) (only remove individual(s) with missing genotype):')
+            print('\t\t\t\t+ Observed heterozygosity: '+observed_heterozygosity_allPos)
+            print('\t\t\t\t+ Expected heterozygosity: '+expected_heterozygosity_allPos)
+            print('\t\t\t\t+ F(IS): '+FIS_allPos)
+
+            print('\t\t\t- Heterozygosity with removing site with missing genotype(s) (remove site if there is at least 1 individual with missing genotype):')
+            print('\t\t\t\t+ Observed heterozygosity: '+observed_heterozygosity_allIndGT)
+            print('\t\t\t\t+ Expected heterozygosity: '+expected_heterozygosity_allIndGT)
+            print('\t\t\t\t+ F(IS): '+FIS_allIndGT)
+
+         dictHETERO_allPos[read_coverage_threshold][MARFt]=HETEROZYGOSITY(observed_heterozygosity_allPos,expected_heterozygosity_allPos)
+         dictHETERO_allIndGT[read_coverage_threshold][MARFt]=HETEROZYGOSITY(observed_heterozygosity_allIndGT,expected_heterozygosity_allIndGT)
+
+   output_file_allfilt.close()
+   return dictHETERO_allPos,dictHETERO_allIndGT
+
+
+
+def compute_heterozygosity(x,y,z):
+   hetero_obs,hetero_exp,x,y,z="","",Decimal(x),Decimal(y),Decimal(z)
+   if (x+y+z)>0.0:
+      hetero_obs=format(y/(x+y+z),'.2e')
+      hetero_exp=format(Decimal(2.0)*((Decimal(2.0)*x+y)/(Decimal(2.0)*(x+y+z)))*((Decimal(2.0)*z+y)/(Decimal(2.0)*(x+y+z))),'.2e')
+   else:
+      hetero_obs="N/A"
+      hetero_exp="N/A"
+   return hetero_obs,hetero_exp
+
+
+
+def set_dict_SFS(dict_GT,dict_allPos,dict_allIndGT,output_full_distrib_file,sep):
+   for gt in OrderedDict(sorted(dict_GT.items(), key=lambda t: t[1], reverse=True)):
+      ### Get list of genotype profiles with occurences / SFS value 
+      occ=dict_GT[gt]
+
+      ### Write genotypes profiles distribution (with lowCov, lowMARFt and "./." genotypes)
+      output_full_distrib_file.write(str(occ)+"\t"+gt+"\n")
+
+      ### Set SFS dictionary for all positions with at least 1 individual is genotyped
+      altNb=SFS_profiles_plot.get_alt_nb(gt,sep,True)
+      if altNb>0:
+         if not altNb in dict_allPos:
+            dict_allPos[altNb]=dict()
+         if not occ in dict_allPos[altNb]:
+            dict_allPos[altNb][occ]=list()
+         dict_allPos[altNb][occ].append(gt)
+
+      ### Set SFS dictionary for positions where all individuals are genotyped
+      altNb=SFS_profiles_plot.get_alt_nb(gt,sep,False)
+      if altNb>0:
+         if not altNb in dict_allIndGT:
+            dict_allIndGT[altNb]=dict()
+         if not occ in dict_allIndGT[altNb]:
+            dict_allIndGT[altNb][occ]=list()
+         dict_allIndGT[altNb][occ].append(gt)
+
+   return dict_allPos,dict_allIndGT
+
+
+
+def write_gt_occ_and_set_dict_SFS(bool_INDEL,dict_GT,PROFILES,sep):
+   output_full_distrib_file=open(PROFILES,"w")
+   dict_SFS_allPos,dict_SFS_allIndGT=dict(),dict()
+
+   if bool_INDEL:
+      for indel_size_interval in dict_GT:
+         dict_SFS_allPos[indel_size_interval],dict_SFS_allIndGT[indel_size_interval]=dict(),dict()
+         dict_SFS_allPos[indel_size_interval],dict_SFS_allIndGT[indel_size_interval]=set_dict_SFS(dict_GT[indel_size_interval],dict_SFS_allPos[indel_size_interval],dict_SFS_allIndGT[indel_size_interval],output_full_distrib_file,sep)
+   else:
+      dict_SFS_allPos,dict_SFS_allIndGT=set_dict_SFS(dict_GT,dict_SFS_allPos,dict_SFS_allIndGT,output_full_distrib_file,sep)
+
+   output_full_distrib_file.close()
+   return dict_SFS_allPos,dict_SFS_allIndGT
+
+
+
+
+
+
+
+
+######################
+###   PARAMETERS   ###
+######################
+
+parser = argparse.ArgumentParser(prog='Pop-Con', description='Pop-Con - A tool for Population genomic Conflicts detection.', epilog='''Source code and manual: http://github.com/YoannAnselmetti/Pop-Con\n\n''', formatter_class=argparse.RawDescriptionHelpFormatter)
+## REQUIRED
+parser.add_argument('-i', "--input_file", dest='vcf_file', type=str, required=True, help='Variant Calling Format file containing variant calling data.')
+## FILTERING
+parser.add_argument('-r', "--read", dest='read_coverage_threshold', type=int, default=[0], nargs='+', help='List of read coverage threshold filtering for each genotype.\nValues range: [0,infinity[. (Default: 0)')
+parser.add_argument('-m', "--marft", dest='marft', type=float, default=[0.0], nargs='+', help='List of Minor Allele Read Frequency threshold for heterozygote genotypes filtering.\nValues range: [0.0,0.5]. (Default: 0.0)')
+parser.add_argument('-f', "--variant_caller_filtering", dest='variant_caller_filtering', type=bool, default=True, help='Boolean to set if variant caller filtering is consider or not. (if \"True\", sites with TAG column are not empty are filtered out from analysis). (Default: True)')
+parser.add_argument('-fmono', "--monomorph_filtering", dest='monomorph_filtering', type=bool, default=False, help='Boolean to set if monomorph have to be filtered out. (if \"True\", monomorph sites will be filtered out from analysis). (Default: False)')
+## OPTIONAL
+### variant caller 
+parser.add_argument('-t', "--tool", dest='variant_caller', type=str, default='GATK', help='Variant calling tool used to call variant.\nValues: "read2snp" or "GATK". (Default: "GATK")')
+### output
+parser.add_argument('-p', "--prefix", dest='prefix', type=str, default='exp1', help='Experiment name (used as prefix for output files). (Default: "exp1")')
+parser.add_argument('-v', "--verbose", dest='verbose', type=int, default=1, help='Verbose intensity. (Default: 1)')
+parser.add_argument('-o', "--output", dest='output_dir', type=str, default=".", help='Output directory path. (Default: ./)')
+parser.add_argument('-hf', "--heterozygosity_file", dest='write_heterozygosity_file', type=bool, default=True, help='Boolean to set if the heterozygosity files (summarizing VCF file for each combination of read coverage and MARF threshold filtering) have to be written or not. (Default: True)')
+### SFS plot
+parser.add_argument('-sep', "--separator", dest='sep', type=str, default=",", help='Separator used in genotype profiles. (Default: ",")')
+parser.add_argument('-max', "--max_profiles", dest='max_profiles', type=int, default=10, help='Maximum number of genotype profiles displayed in SFS plot. (Default: 10)')
+
+
+
+################
+###   MAIN   ###
+################
+if __name__ == '__main__':
+
+   start_time=datetime.now()
+
+   # !!! VCF file must be compressed and indexed:
+   #    bgzip $spe.allSite_filter.vcf              # or  bcftools view $spe.allSite_filter.vcf -Oz -o $spe.allSite_filter.vcf.gz
+   #    tabix -p vcf $spe.allSite_filter.vcf.gz    # or  bcftools index $spe.allSite_filter.vcf.gz
+
+   if len(argv)==1:
+      argv.append('-h')
+
+   args = parser.parse_args()
+
+   vcf_file=args.vcf_file
+   prefix=args.prefix
+   variant_caller=args.variant_caller
+
+   OUTPUT=args.output_dir
+   list_MARFt=args.marft
+   list_read_coverage_threshold=args.read_coverage_threshold
+
+   use_variant_caller_filter=args.variant_caller_filtering
+   write_heterozygosity_file=args.write_heterozygosity_file
+   verbose=args.verbose
+   sep=args.sep
+   max_profiles=args.max_profiles
+   monomorph_filtering=args.monomorph_filtering
+
+
+   if variant_caller=='read2snp':
+      print('As variant caller tool used is read2snp, no filtering is applied on minor allele frequency and read coverage.')
+      list_MARFt=[0.0]
+      list_read_coverage_threshold=[0]
+   else:
+      if variant_caller=='GATK':
+         pass
+      else:
+         print('Variant caller is nor read2snp nor GATK -> Pop-Con is set with the GATK VCF format file')
+         variant_caller='GATK'
+
+
+   util.mkdir_p(OUTPUT)
+   ###########
+   ### Remove previous heterozygosity file if it exists
+   ###########
+   if write_heterozygosity_file:
+      for variant_type in listdir(OUTPUT):         
+         if path.isdir(OUTPUT+'/'+variant_type):
+            for MARFt in listdir(OUTPUT+'/'+variant_type):
+               if path.isdir(OUTPUT+'/'+variant_type+'/'+MARFt+'/heterozygosity'):
+                  for read_coverage_threshold in listdir(OUTPUT+'/'+variant_type+'/'+MARFt+'/heterozygosity'):
+                     if path.isdir(OUTPUT+'/'+variant_type+'/'+MARFt+'/heterozygosity/'+str(read_coverage_threshold)):                     
+                        for file in listdir(OUTPUT+'/'+variant_type+'/'+MARFt+'/heterozygosity/'+str(read_coverage_threshold)):
+                           if fnmatch(file,'*_'+prefix+'_*.tab'):
+                              remove(OUTPUT+'/'+variant_type+'/'+MARFt+'/heterozygosity/'+str(read_coverage_threshold)+'/'+file)
+                           if fnmatch(file,'*_'+prefix+'.tab'):
+                              remove(OUTPUT+'/'+variant_type+'/'+MARFt+'/heterozygosity/'+str(read_coverage_threshold)+'/'+file)
+
+   HETEROZYGOSITY=namedtuple('HETEROZYGOSITY',['obs','exp'])
+
+   # Read VCF to compute SNP heterozygosity and plot SNP and indel SFS
+   if verbose>=1:
+      print('\n\n1/ Read and get informations from input VCF "'+vcf_file+'":')
+   individuals_number,dict_SNP_genotypes,dict_indel_genotypes=read_VCF_file(vcf_file,prefix,OUTPUT,list_read_coverage_threshold,list_MARFt,monomorph_filtering,sep,verbose)
+
+
+   if verbose>=1:
+      print('\n\n2/ SFS plot with genotypes profiles:')
+   for MARFt in sorted(list_MARFt):
+      if verbose>=1:
+         print('\n\tMARFt='+str(MARFt)+':')
+      for read_coverage_threshold in sorted(list_read_coverage_threshold):
+         #############
+         ### For SNP
+         #############
+         if verbose>=1:
+            print('\n\t\tRead coverage threshold='+str(read_coverage_threshold)+':')
+            print('\n\t\t\tSNP:')
+            print('\t\t\t\tA/ Store genotypes infos with filtering TAG')
+         hetero_DIR=OUTPUT+'/SNP/MARFt'+str(MARFt)+'/heterozygosity/read'+str(read_coverage_threshold)
+         ### Set SFS plot dict()
+         output_profiles_file=hetero_DIR+'/genotype_profiles_distrib_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'.tab'
+         dict_SFS_allPos,dict_SFS_allIndGT=write_gt_occ_and_set_dict_SFS(False,dict_SNP_genotypes[read_coverage_threshold][MARFt],output_profiles_file,sep)
+
+         # ### Store SFS plot in dictionaries
+         # input_genotypes_file=hetero_DIR+'/heterozygosity_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'.tab'
+         # output_profiles_file=hetero_DIR+'/genotype_profiles_distrib_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'.tab'
+         # dict_SFS_allPos,dict_SFS_allIndGT=SFS_profiles_plot.store_SNP_genotypes_file(input_genotypes_file,output_profiles_file,sep,verbose)
+
+
+         ########
+         ### Set dictionary for SFS plot with genotype profiles
+         ########
+         if verbose>=1:
+            print('\t\t\t\tB/ Plot SFS with genotypes profiles:')
+         SFSplot_DIR=OUTPUT+'/SNP/MARFt'+str(MARFt)+'/SFS_profiles/read'+str(read_coverage_threshold)
+         util.mkdir_p(SFSplot_DIR)
+         ### Case for positions where all individuals are genotyped and passed filtering step
+         if verbose>=1:
+            print('\t\t\t\t\ta/ Case for positions where all individuals are genotyped and passed "read coverage+minor allele read frequency" filtering step')
+         dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT,max_profiles,False,verbose)         
+         output_SFS_plot=SFSplot_DIR+'/SFSplot_genotypes_profiles_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'.pdf'
+         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,read_coverage_threshold,MARFt,prefix,False,output_SFS_plot)
+         ### Case for all positions (same positions filtered out)
+         if verbose>=1:
+            print('\t\t\t\t\tb/ Case for all positions (same positions "read coverage+minor allele read frequency" filtered out)')
+         dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos,max_profiles,True,verbose)
+         output_SFS_plot=SFSplot_DIR+'/SFSplot_genotypes_profiles_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'_all_positions.pdf'
+         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,read_coverage_threshold,MARFt,prefix,True,output_SFS_plot)
+
+         ########
+         ### Write SFS plot with genotypes profiles input file for R script
+         ########
+         if verbose>=1:
+            print('\t\t\t\tC/ Write SFS plot with genotypes profiles input file for R script')
+         output_profiles_allPos_file=hetero_DIR+'/genotype_profiles_per_altNb_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'_with_all_positions.tab'
+         output_profiles_allIndGT_file=hetero_DIR+'/genotype_profiles_per_altNb_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'_with_positions_with_all_individuals_genotyped.tab'
+         SFS_profiles_plot.write_R_SFS_profiles(individuals_number,dict_SFS_allPos,output_profiles_allPos_file,max_profiles,verbose)
+         SFS_profiles_plot.write_R_SFS_profiles(individuals_number,dict_SFS_allIndGT,output_profiles_allIndGT_file,max_profiles,verbose)
+
+
+
+         #############
+         ### For indel
+         #############
+         hetero_DIR=OUTPUT+'/indel/MARFt'+str(MARFt)+'/heterozygosity/read'+str(read_coverage_threshold)
+         # input_genotypes_file=hetero_DIR+'/heterozygosity_read'+str(read_coverage_threshold)+'_'+prefix+'_indel_MARFt'+str(MARFt)+'.tab'
+         # if path.isfile(input_genotypes_file):
+         if dict_indel_genotypes:
+            if verbose>=1:
+               print('\n\t\t\tINDEL')
+               print('\t\t\t\tA/ Store genotypes infos with filtering tag')
+            output_profiles_file=hetero_DIR+'/genotype_profiles_distrib_read'+str(read_coverage_threshold)+'_'+prefix+'_indel_MARFt'+str(MARFt)+'.tab'
+            dict_SFS_allPos,dict_SFS_allIndGT=write_gt_occ_and_set_dict_SFS(True,dict_indel_genotypes[read_coverage_threshold][MARFt],output_profiles_file,sep)
+            # dict_SFS_allPos,dict_SFS_allIndGT=SFS_profiles_plot.store_indel_genotypes_file(input_genotypes_file,output_profiles_file,sep,verbose)
+            
+            ########
+            ### Set dictionary for SFS plot with genotype profiles
+            ########
+            if verbose>=1:
+               print('\t\t\t\tB/ Plot SFS with genotypes profiles:')
+               print('\t\t\t\t\ta/ Case for positions where all individuals are genotyped and passed filtering step:')
+            for indel_size_interval in dict_SFS_allIndGT:
+               SFSplot_DIR=OUTPUT+'/indel/MARFt'+str(MARFt)+'/SFS_profiles/read'+str(read_coverage_threshold)+'/'+indel_size_interval
+               util.mkdir_p(SFSplot_DIR)
+               if verbose>=1:
+                  print('\t\t\t\t\t\tIndel size interval "'+indel_size_interval+'"')
+               dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT[indel_size_interval],max_profiles,False,verbose)
+               output_SFS_plot=SFSplot_DIR+'/SFSplot_genotypes_profiles_read'+str(read_coverage_threshold)+'_'+prefix+'_indel_'+indel_size_interval+'_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'.pdf'
+               SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,read_coverage_threshold,MARFt,prefix,False,output_SFS_plot)
+            if verbose>=1:
+               print('\t\t\t\t\tb/ Case for all positions (same positions filtered out):')
+            for indel_size_interval in dict_SFS_allPos:
+               SFSplot_DIR=OUTPUT+'/indel/MARFt'+str(MARFt)+'/SFS_profiles/read'+str(read_coverage_threshold)+'/'+indel_size_interval
+               util.mkdir_p(SFSplot_DIR)
+               if verbose>=1:
+                  print('\t\t\t\t\t\tIndel size interval "'+indel_size_interval+'"')
+               dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos[indel_size_interval],max_profiles,True,verbose)
+               output_SFS_plot=SFSplot_DIR+'/SFSplot_genotypes_profiles_read'+str(read_coverage_threshold)+'_'+prefix+'_indel_'+indel_size_interval+'_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'_all_positions.pdf'
+               SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,read_coverage_threshold,MARFt,prefix,True,output_SFS_plot)
+
+            ########
+            ### Write SFS plot with genotypes profiles input file for R script
+            ########
+            if verbose>=1:
+               print('\t\t\t\tC/ Write SFS plot with genotypes profiles input file for R script')
+            for indel_size_interval in dict_SFS_allPos:
+               if verbose>=1:
+                  print('\t\t\t\t\t\tIndel size interval "'+indel_size_interval+'"')
+               output_profiles_allPos_file=hetero_DIR+'/genotype_profiles_per_altNb_read'+str(read_coverage_threshold)+'_'+prefix+'_indel_'+str(indel_size_interval)+'_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'_with_all_positions.tab'
+               output_profiles_allIndGT_file=hetero_DIR+'/genotype_profiles_per_altNb_read'+str(read_coverage_threshold)+'_'+prefix+'_indel_'+str(indel_size_interval)+'_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'_with_positions_with_all_individuals_genotyped.tab'
+               SFS_profiles_plot.write_R_SFS_profiles(individuals_number,dict_SFS_allPos[indel_size_interval],output_profiles_allPos_file,max_profiles,verbose)
+               if indel_size_interval in dict_SFS_allIndGT:
+                  SFS_profiles_plot.write_R_SFS_profiles(individuals_number,dict_SFS_allIndGT[indel_size_interval],output_profiles_allIndGT_file,max_profiles,verbose)
+
+
+   end_time=datetime.now()
+   print('\nDuration: '+str(end_time-start_time))

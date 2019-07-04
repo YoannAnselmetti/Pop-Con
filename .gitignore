@@ -1,0 +1,4 @@
+popcon/*.pyc
+Pop_Con.egg-info/
+build
+dist
