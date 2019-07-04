@@ -1,9 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
    name='Pop-Con',
-   version='1.0.1',
-   packages=['popcon'],
+   version='1.0.0',
+   packages=find_packages(),
    classifiers=[
       "Development Status :: 4 - Beta",
       "Environment :: Console",
@@ -15,7 +15,7 @@ setup(
       "Topic :: Scientific/Engineering :: Bio-Informatics",
       "Topic :: Scientific/Engineering :: Visualization"
    ],
-   scripts=['Pop-Con','scripts/'],
+   scripts=['Pop-Con','scripts/SFS_genotypes_profiles_plot.R'],
    description='Visualization of genotype profiles on population genomics data for detection of abnormal genotypes pattern.',
    long_description_content_type="text/markdown",
    long_description=open("README.md").read(),

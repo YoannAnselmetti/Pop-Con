@@ -11,6 +11,8 @@ from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
 import matplotlib.patches as mpatches
 from matplotlib.lines import Line2D
+
+### home-made package
 from heterozygosity import get_indel_size_interval
 
 

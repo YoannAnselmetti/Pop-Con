@@ -62,7 +62,15 @@ In the **Pop-Con** folder where "setup.py" is located, run:
 sudo python setup.py install
 ```
 
-If you encountered problem during the installation of cyvcf2, you have to install it manually from the source:
+If you encountered problem during the installation of cyvcf2 or get this following error message when executing Pop-Con:
+```
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/usr/local/lib/python3.6/site-packages/cyvcf2/__init__.py", line 1, in <module>
+    from .cyvcf2 import (VCF, Variant, Writer, r_ as r_unphased, par_relatedness,
+ImportError: /usr/local/lib/python3.6/site-packages/cyvcf2/cyvcf2.cpython-36m-x86_64-linux-gnu.so: undefined symbol: EVP_sha1
+```
+You have to install it manually from the source:
 https://github.com/brentp/cyvcf2
 
 
@@ -171,6 +179,26 @@ BIBLIOGRAPHIE
 [2] Pedersen, B. S. & Quinlan, A. R. cyvcf2: fast, flexible variant analysis with Python. Bioinformatics 33, 1867–1869 (2017).
 [3] McKenna, A. et al. The Genome Analysis Toolkit: A MapReduce framework for analyzing next-generation DNA sequencing data. Genome Res. 20, 1297–1303 (2010).
 [4] Gayral, P. et al. Reference-Free Population Genomics from Next-Generation Transcriptome Data and the Vertebrate–Invertebrate Gap. PLOS Genetics 9, e1003457 (2013).
+
+
+TROUBLESHOOTING
+---------------
+You get the following error message, when you forgot to set the option `--tool read2snp`. 
+```bash
+Traceback (most recent call last):
+  File "./Pop-Con", line 404, in <module>
+    individuals_number,dict_SNP_genotypes,dict_indel_genotypes=read_VCF_file(vcf_file,prefix,OUTPUT,list_read_coverage_threshold,list_MARFt,monomorph_filtering,sep,verbose)
+  File "./Pop-Con", line 127, in read_VCF_file
+    dict_SNP_genotypes,dict_SNP_SFS_allPos,dict_SNP_SFS_allIndGT,dict_SNP_hetero,dict_FIS=heterozygosity.store_polymorphism(variant,list_Individuals,dict_SNP_genotypes,dict_SNP_SFS_allPos,dict_SNP_SFS_allIndGT,dict_SNP_hetero,dict_FIS,OUTPUT,'SNP',prefix,list_read_coverage_threshold,list_MARFt,False,variant_caller,write_heterozygosity_file,sep,verbose)
+  File "/home/yanselmetti/Bureau/Pop-Con/popcon/heterozygosity.py", line 365, in store_polymorphism
+    variant_size,x,y,z,listInd,dict_SFS_allPos,dict_SFS_allIndGT=store_SFS(variant,dict_SFS_allPos,dict_SFS_allIndGT,read_coverage_threshold,MARFt,bool_INDEL,variant_caller,verbose)
+  File "/home/yanselmetti/Bureau/Pop-Con/popcon/heterozygosity.py", line 212, in store_SFS
+    alt,x,y,z,listInd=get_polymorphism_GATK(variant,read_coverage_threshold,MARFt)
+  File "/home/yanselmetti/Bureau/Pop-Con/popcon/heterozygosity.py", line 54, in get_polymorphism_GATK
+    str_coverage=str(variant).split()[x].split(":")[1]
+IndexError: list index out of range
+```
+Pop-Con was only tested on VCF files produced by *GATK* or *read2snp*. If you used others varaiant caller tool and encountered can you please write an issue. I'll try to shortly produce a new module for the VCF of this variant caller.
 
 
 MISCELLANEOUS

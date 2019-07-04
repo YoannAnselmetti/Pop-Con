@@ -1,7 +1,7 @@
 from collections import namedtuple   #New in version 2.6
 from os import path
 from decimal import Decimal
-from . import util
+from util import mkdir_p
 
 GENOTYPE=namedtuple('GENOTYPE',['x','y','z','x_allIndGT','y_allIndGT','z_allIndGT','mono','snp','lowCov','pos_allIndGT'])
 FIS=namedtuple('FIS',['nfobs','nfexp','fobs','fexp'])
@@ -377,7 +377,7 @@ def store_polymorphism(variant,list_Individuals,dict_genotypes,dict_SFS_allPos,d
          if write_heterozygosity_file:
             # Write current genotype in 'output_file'
             output_dir=OUTPUT+'/'+variantType+'/MARFt'+str(MARFt)+'/heterozygosity/read'+str(read_coverage_threshold)
-            util.mkdir_p(output_dir)
+            mkdir_p(output_dir)
             output_file=output_dir+'/heterozygosity_read'+str(read_coverage_threshold)+'_'+prefix+'_'+variantType+'_MARFt'+str(MARFt)+'.tab'
             if bool_INDEL:
                write_heterozygosity_indel(output_file,variant_size,variant,x,y,z,listInd,list_Individuals)
