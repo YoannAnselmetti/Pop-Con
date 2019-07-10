@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 ###
 ###   Author:              Yoann Anselmetti
-###   Last modification:   2019/07/03
+###   Last modification:   2019/07/09
 ###
 ###   Goal: Read and parse a Variant Calling Format (VCF) file to:
 ###      - compute general heterozygosity statistics on population genomics data
@@ -422,11 +422,6 @@ if __name__ == '__main__':
          output_profiles_file=hetero_DIR+'/genotype_profiles_distrib_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'.tab'
          dict_SFS_allPos,dict_SFS_allIndGT=write_gt_occ_and_set_dict_SFS(False,dict_SNP_genotypes[read_coverage_threshold][MARFt],output_profiles_file,sep)
 
-         # ### Store SFS plot in dictionaries
-         # input_genotypes_file=hetero_DIR+'/heterozygosity_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'.tab'
-         # output_profiles_file=hetero_DIR+'/genotype_profiles_distrib_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'.tab'
-         # dict_SFS_allPos,dict_SFS_allIndGT=SFS_profiles_plot.store_SNP_genotypes_file(input_genotypes_file,output_profiles_file,sep,verbose)
-
 
          ########
          ### Set dictionary for SFS plot with genotype profiles
@@ -440,13 +435,13 @@ if __name__ == '__main__':
             print('\t\t\t\t\ta/ Case for positions where all individuals are genotyped and passed "read coverage+minor allele read frequency" filtering step')
          dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT,max_profiles,False,verbose)         
          output_SFS_plot=SFSplot_DIR+'/SFSplot_genotypes_profiles_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'.pdf'
-         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,read_coverage_threshold,MARFt,prefix,False,output_SFS_plot)
+         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,False,output_SFS_plot)
          ### Case for all positions (same positions filtered out)
          if verbose>=1:
             print('\t\t\t\t\tb/ Case for all positions (same positions "read coverage+minor allele read frequency" filtered out)')
          dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos,max_profiles,True,verbose)
          output_SFS_plot=SFSplot_DIR+'/SFSplot_genotypes_profiles_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'_all_positions.pdf'
-         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,read_coverage_threshold,MARFt,prefix,True,output_SFS_plot)
+         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,True,output_SFS_plot)
 
          ########
          ### Write SFS plot with genotypes profiles input file for R script
@@ -487,7 +482,7 @@ if __name__ == '__main__':
                   print('\t\t\t\t\t\tIndel size interval "'+indel_size_interval+'"')
                dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT[indel_size_interval],max_profiles,False,verbose)
                output_SFS_plot=SFSplot_DIR+'/SFSplot_genotypes_profiles_read'+str(read_coverage_threshold)+'_'+prefix+'_indel_'+indel_size_interval+'_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'.pdf'
-               SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,read_coverage_threshold,MARFt,prefix,False,output_SFS_plot)
+               SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,False,output_SFS_plot)
             if verbose>=1:
                print('\t\t\t\t\tb/ Case for all positions (same positions filtered out):')
             for indel_size_interval in dict_SFS_allPos:
@@ -497,7 +492,7 @@ if __name__ == '__main__':
                   print('\t\t\t\t\t\tIndel size interval "'+indel_size_interval+'"')
                dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos[indel_size_interval],max_profiles,True,verbose)
                output_SFS_plot=SFSplot_DIR+'/SFSplot_genotypes_profiles_read'+str(read_coverage_threshold)+'_'+prefix+'_indel_'+indel_size_interval+'_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'_all_positions.pdf'
-               SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,read_coverage_threshold,MARFt,prefix,True,output_SFS_plot)
+               SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,True,output_SFS_plot)
 
             ########
             ### Write SFS plot with genotypes profiles input file for R script

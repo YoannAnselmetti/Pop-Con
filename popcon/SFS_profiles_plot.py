@@ -3,8 +3,8 @@ from collections import OrderedDict,namedtuple   #New in version 2.6
 
 ### Matplotlib packages import
 import numpy as np 
-# import matplotlib
-# matplotlib.use('Agg')
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.cm as cm
 from matplotlib import pyplot as plt
 from matplotlib.font_manager import FontProperties
@@ -82,12 +82,15 @@ def get_alt_nb(genotypes,sep,bool_allPOS):
    return altNb
 
 
-def store_indel_genotypes_file(GENOTYPES,PROFILES,sep,verbose):
+def store_indel_genotypes_file(GENOTYPES,sep,verbose):
    step,y,x=100000,0,0
    dict_genotypes=dict()
    genotype_file=open(GENOTYPES,"r")
+   individuals_number=0
    for line in genotype_file:
-      if not "#chromosome/scaffold" in line:
+      if "#chromosome/scaffold" in line:
+         individuals_number=len(line.split())-6
+      else:
          columns=len(line.split())
          indel_size=int(line.split()[2])
          z,genotypes=0,""
@@ -124,7 +127,7 @@ def store_indel_genotypes_file(GENOTYPES,PROFILES,sep,verbose):
             dict_genotypes[indel_size_interval][genotypes]=0
          dict_genotypes[indel_size_interval][genotypes]+=1
 
-   output_full_distrib_file=open(PROFILES,"w")
+   # output_full_distrib_file=open(PROFILES,"w")
    dict_SFS_allIndGT,dict_SFS_allPos=dict(),dict()
    for indel_size_interval in dict_genotypes:
       dict_SFS_allIndGT[indel_size_interval],dict_SFS_allPos[indel_size_interval]=dict(),dict()
@@ -132,8 +135,8 @@ def store_indel_genotypes_file(GENOTYPES,PROFILES,sep,verbose):
          # Get list of genotype profiles with occurences / SFS value 
          occ=dict_genotypes[indel_size_interval][gt]
 
-         ### Write genotypes profiles distribution (with lowCov, lowMARFt and "./." genotypes)
-         output_full_distrib_file.write(str(occ)+"\t"+gt+"\n")
+         # ### Write genotypes profiles distribution (with lowCov, lowMARFt and "./." genotypes)
+         # output_full_distrib_file.write(str(occ)+"\t"+gt+"\n")
 
          ### Set SFS dictionary for all positions with at least 1 individual is genotyped
          altNb=get_alt_nb(gt,sep,True)
@@ -153,23 +156,26 @@ def store_indel_genotypes_file(GENOTYPES,PROFILES,sep,verbose):
                dict_SFS_allIndGT[indel_size_interval][altNb][occ]=list()
             dict_SFS_allIndGT[indel_size_interval][altNb][occ].append(gt)
 
-   output_full_distrib_file.close()
+   # output_full_distrib_file.close()
 
-   return dict_SFS_allPos,dict_SFS_allIndGT
-
-
+   return dict_SFS_allPos,dict_SFS_allIndGT,individuals_number
 
 
 
 
 
 
-def store_SNP_genotypes_file(GENOTYPES,PROFILES,sep,verbose):
+
+
+def store_SNP_genotypes_file(GENOTYPES,sep,verbose):
    step,y,x=100000,0,0
    dict_genotypes=dict()
    genotype_file=open(GENOTYPES,"r")
+   individuals_number=0
    for line in genotype_file:
-      if not "#chromosome/scaffold" in line:
+      if "#chromosome/scaffold" in line:
+         individuals_number=len(line.split())-5
+      else:
          columns=len(line.split())
          z,genotypes=0,""
          while 5+z<columns:
@@ -193,14 +199,15 @@ def store_SNP_genotypes_file(GENOTYPES,PROFILES,sep,verbose):
             dict_genotypes[genotypes]=0
          dict_genotypes[genotypes]+=1
 
-   output_full_distrib_file=open(PROFILES,"w")
+
+   # output_full_distrib_file=open(PROFILES,"w")
    dict_SFS_allIndGT,dict_SFS_allPos=dict(),dict()
    for gt in OrderedDict(sorted(dict_genotypes.items(), key=lambda t: t[1], reverse=True)):
       # Get list of genotype profiles with occurences / SFS value 
       occ=dict_genotypes[gt]
 
-      ### Write genotypes profiles distribution (with lowCov, lowMARFt and "./." genotypes)
-      output_full_distrib_file.write(str(occ)+"\t"+gt+"\n")
+      # ### Write genotypes profiles distribution (with lowCov, lowMARFt and "./." genotypes)
+      # output_full_distrib_file.write(str(occ)+"\t"+gt+"\n")
 
       ### Set SFS dictionary for all positions with at least 1 individual is genotyped
       altNb=get_alt_nb(gt,sep,True)
@@ -220,9 +227,9 @@ def store_SNP_genotypes_file(GENOTYPES,PROFILES,sep,verbose):
             dict_SFS_allIndGT[altNb][occ]=list()
          dict_SFS_allIndGT[altNb][occ].append(gt)
 
-   output_full_distrib_file.close()
+   # output_full_distrib_file.close()
 
-   return dict_SFS_allPos,dict_SFS_allIndGT
+   return dict_SFS_allPos,dict_SFS_allIndGT,individuals_number
 
 
 
@@ -422,7 +429,7 @@ def print_SFS_gt_profiles_legend(Wrect,dict_SFS_profile_name,ax_legend,yinit,leg
 
 
 
-def SFS_plot_genotypes_profiles(individuals_number,dict_SFS_profile_occ,dict_SFS_profile_name,max_profiles,read_coverage_threshold,MARFt,prefix,low,OUTPUT):
+def SFS_plot_genotypes_profiles(individuals_number,dict_SFS_profile_occ,dict_SFS_profile_name,max_profiles,low,OUTPUT):
    ### Set legend parameters
    max_lines_per_column=(max_profiles+2)*4
    colNb=get_legend_col_nb(dict_SFS_profile_name,max_lines_per_column,individuals_number)

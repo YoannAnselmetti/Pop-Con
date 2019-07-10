@@ -173,7 +173,7 @@ File: "SFSplot_genotypes_profiles_read0_Lineus_longissimus_SNP_MARFt0.0_max20_al
 ![Lineus longissimus SFS plot with genotype profiles (all positions)](docs/img/SFSplot_genotypes_profiles_read0_Lineus_longissimus_SNP_MARFt0.0_max20_all_positions.pdf)
 
 
-BIBLIOGRAPHIE
+BIBLIOGRAPHY
 -------------
 [1] Danecek, P. et al. The variant call format and VCFtools. Bioinformatics 27, 2156–2158 (2011).
 [2] Pedersen, B. S. & Quinlan, A. R. cyvcf2: fast, flexible variant analysis with Python. Bioinformatics 33, 1867–1869 (2017).
