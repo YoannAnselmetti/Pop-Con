@@ -1,4 +1,5 @@
 popcon/*.pyc
+popcon/__pycache__/
 Pop_Con.egg-info/
 build
 dist

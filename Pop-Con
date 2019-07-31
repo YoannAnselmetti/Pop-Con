@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 ###
 ###   Author:              Yoann Anselmetti
-###   Last modification:   2019/07/09
+###   Last modification:   2019/07/31
 ###
 ###   Goal: Read and parse a Variant Calling Format (VCF) file to:
 ###      - compute general heterozygosity statistics on population genomics data
@@ -320,7 +320,7 @@ parser.add_argument('-i', "--input_file", dest='vcf_file', type=str, required=Tr
 parser.add_argument('-r', "--read", dest='read_coverage_threshold', type=int, default=[0], nargs='+', help='List of read coverage threshold filtering for each genotype.\nValues range: [0,infinity[. (Default: 0)')
 parser.add_argument('-m', "--marft", dest='marft', type=float, default=[0.0], nargs='+', help='List of Minor Allele Read Frequency threshold for heterozygote genotypes filtering.\nValues range: [0.0,0.5]. (Default: 0.0)')
 parser.add_argument('-f', "--variant_caller_filtering", dest='variant_caller_filtering', type=bool, default=True, help='Boolean to set if variant caller filtering is consider or not. (if \"True\", sites with TAG column are not empty are filtered out from analysis). (Default: True)')
-parser.add_argument('-fmono', "--monomorph_filtering", dest='monomorph_filtering', type=bool, default=False, help='Boolean to set if monomorph have to be filtered out. (if \"True\", monomorph sites will be filtered out from analysis). (Default: False)')
+parser.add_argument('-fmono', "--monomorph_filtering", dest='monomorph_filtering', type=bool, default=True, help='Boolean to set if monomorph have to be filtered out. (if \"True\", monomorph sites will be filtered out from analysis). (Default: True)')
 ## OPTIONAL
 ### variant caller 
 parser.add_argument('-t', "--tool", dest='variant_caller', type=str, default='GATK', help='Variant calling tool used to call variant.\nValues: "read2snp" or "GATK". (Default: "GATK")')

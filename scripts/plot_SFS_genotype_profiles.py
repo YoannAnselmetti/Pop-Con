@@ -99,7 +99,7 @@ if __name__ == '__main__':
          print('\nVariant type is "indel"')
          print('\t\tA/ Store genotypes infos with filtering TAG')
       ### Set SFS plot in dict()
-      dict_SFS_allPos,dict_SFS_allIndGT=SFS_profiles_plot.store_indel_genotypes_file(heterozygosity_file,sep,verbose)
+      dict_SFS_allPos,dict_SFS_allIndGT,individuals_number=SFS_profiles_plot.store_indel_genotypes_file(heterozygosity_file,sep,verbose)
 
       ### Case for positions where all individuals are genotyped and passed filtering step
       if verbose>=1:
@@ -110,7 +110,7 @@ if __name__ == '__main__':
          util.mkdir_p(SFSplot_DIR)
          if verbose>=1:
             print('\t\t\t\tIndel size interval "'+indel_size_interval+'"')
-         dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT,max_profiles,False,verbose)
+         dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT[indel_size_interval],max_profiles,False,verbose)
          output_SFS_plot=SFSplot_DIR+'/'+prefix+'_max'+str(max_profiles)+'.pdf'
          SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,False,output_SFS_plot)
 
@@ -122,7 +122,7 @@ if __name__ == '__main__':
          util.mkdir_p(SFSplot_DIR)
          if verbose>=1:
             print('\t\t\t\tIndel size interval "'+indel_size_interval+'"')
-         dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos,max_profiles,True,verbose)
+         dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos[indel_size_interval],max_profiles,True,verbose)
          output_SFS_plot=SFSplot_DIR+'/'+prefix+'_max'+str(max_profiles)+'_all_positions.pdf'
          SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,True,output_SFS_plot)
    else:

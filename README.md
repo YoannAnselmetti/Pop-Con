@@ -105,7 +105,7 @@ optional arguments:
   -fmono MONOMORPH_FILTERING, --monomorph_filtering MONOMORPH_FILTERING
                         Boolean to set if monomorph have to be filtered out.
                         (if "True", monomorph sites will be filtered out from
-                        analysis). (Default: False)
+                        analysis). (Default: True)
   -t VARIANT_CALLER, --tool VARIANT_CALLER
                         Variant calling tool used to call variant. Values:
                         "read2snp" or "GATK". (Default: "GATK")
