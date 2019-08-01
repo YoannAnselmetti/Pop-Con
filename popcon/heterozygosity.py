@@ -333,7 +333,7 @@ def fill_dict_genotypes(dict_genotypes,read_coverage_threshold,MARFt,bool_INDEL,
          dict_genotypes[read_coverage_threshold][MARFt][indel_size_interval][gt_profile]=0
       dict_genotypes[read_coverage_threshold][MARFt][indel_size_interval][gt_profile]+=1
 
-      if not indel_size_interval in dict_genotypes[read_coverage_threshold][MARFt]:
+      if not "all_size" in dict_genotypes[read_coverage_threshold][MARFt]:
          dict_genotypes[read_coverage_threshold][MARFt]["all_size"]=dict()
       if not gt_profile in dict_genotypes[read_coverage_threshold][MARFt]["all_size"]:
          dict_genotypes[read_coverage_threshold][MARFt]["all_size"][gt_profile]=0
