@@ -246,7 +246,7 @@ def store_SNP_genotypes_file(GENOTYPES,sep,verbose):
 
 
 
-def HWE_others_occ_color(low,dict_HWE_altNb_cat,altNb,occ_others,occ_tot,default_color,excess_color,deficit_color):
+def HWE_others_occ_color(low,dict_HWE_altNb_cat,altNb,occ_others,occ_tot,HWE_fold_change,default_color,excess_color,deficit_color):
    HWE_others_occ,HWE_others_color=0,default_color
    if not low:
       ##########
@@ -344,7 +344,7 @@ def get_dict_for_SFS_plot_with_genotypes_profile(individuals,dict_SFS,max_profil
          ### SET "OTHERS" CATEGROY
          ##############
          occ_others=occ_tot-stacked_occ
-         HWE_others_occ,hwe_others_color=HWE_others_occ_color(low,dict_HWE_altNb_cat,altNb,occ_others,occ_tot,default_color,excess_color,deficit_color)
+         HWE_others_occ,hwe_others_color=HWE_others_occ_color(low,dict_HWE_altNb_cat,altNb,occ_others,occ_tot,HWE_fold_change,default_color,excess_color,deficit_color)
          if not i in dict_SFS_profile_occ:
             dict_SFS_profile_occ[i]=list()
          dict_SFS_profile_occ[i].append(OCC(occ_others,HWE_others_occ,colors[i],hwe_others_color))
