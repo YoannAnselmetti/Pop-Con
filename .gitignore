@@ -1,5 +1,7 @@
 popcon/*.pyc
 popcon/__pycache__/
 Pop_Con.egg-info/
+.eggs/
 build
 dist
+update_pypi_Pop-Con.txt

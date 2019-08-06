@@ -1,3 +1,10 @@
+###
+###   Author:              Yoann Anselmetti
+###   Last modification:   2019/08/06
+###
+###   License: This software is distributed under the CeCILL free software license (Version 2.1 dated 2013-06-21)
+###
+
 from collections import namedtuple   #New in version 2.6
 from os import path
 from decimal import Decimal

@@ -1,3 +1,10 @@
+###
+###   Author:              Yoann Anselmetti
+###   Last modification:   2019/08/06
+###
+###   License: This software is distributed under the CeCILL free software license (Version 2.1 dated 2013-06-21)
+###
+
 from math import pow,ceil
 from collections import OrderedDict,namedtuple   #New in version 2.6
 
@@ -239,8 +246,8 @@ def store_SNP_genotypes_file(GENOTYPES,sep,verbose):
 
 
 
-def HWE_others_occ_color(low,dict_HWE_altNb_cat,altNb,occ_others,occ_tot):
-   HWE_others_occ,HWE_others_color=0,"grey"
+def HWE_others_occ_color(low,dict_HWE_altNb_cat,altNb,occ_others,occ_tot,default_color,excess_color,deficit_color):
+   HWE_others_occ,HWE_others_color=0,default_color
    if not low:
       ##########
       ### HWE expectations computations
@@ -255,22 +262,22 @@ def HWE_others_occ_color(low,dict_HWE_altNb_cat,altNb,occ_others,occ_tot):
             # print(ratio,occCAT,HWE_others_occ)
 
          ratio_obs_on_HWE_others_occ=float(occ_others)/HWE_others_occ
-         if ratio_obs_on_HWE_others_occ<=0.5:
-            HWE_others_color="blue"
-         elif ratio_obs_on_HWE_others_occ>=2.0:
-            HWE_others_color="red"
+         if ratio_obs_on_HWE_others_occ<=(1.0/HWE_fold_change):
+            HWE_others_color=deficit_color
+         elif ratio_obs_on_HWE_others_occ>=HWE_fold_change:
+            HWE_others_color=excess_color
          else:
-            HWE_others_color="grey"
+            HWE_others_color=default_color
    return HWE_others_occ,HWE_others_color
 
 
 
-def get_dict_for_SFS_plot_with_genotypes_profile(individuals,dict_SFS,max_profiles,low,verbose):
+def get_dict_for_SFS_plot_with_genotypes_profile(individuals,dict_SFS,max_profiles,low,HWE_fold_change,default_color,excess_color,deficit_color,verbose):
    colors=cm.Spectral(np.linspace(0,1,max_profiles+2))
    dict_HWE_altNb_cat=HW_expectations(individuals)
    list_=list()
    dict_SFS_profile_occ,dict_SFS_profile_name=dict(),dict()
-   for altNb in range(1,(individuals*2)+1): 
+   for altNb in range(1,(individuals*2)+1):
       list_profiles_names=list()
       # if verbose>1:
       #    print("\n"+str(altNb)+":")
@@ -289,7 +296,7 @@ def get_dict_for_SFS_plot_with_genotypes_profile(individuals,dict_SFS,max_profil
                   # if verbose>1:
                   #    print("\t"+str(occ)+":\t"+profile)
 
-                  HWE_occ,hwe_color=0,"grey"
+                  HWE_occ,hwe_color=0,default_color
                   if not low:
                      ##########
                      ### HWE expectations computations
@@ -309,12 +316,12 @@ def get_dict_for_SFS_plot_with_genotypes_profile(individuals,dict_SFS,max_profil
 
                      HWE_occ=ratio*float(occ_tot)
                      ratio_obs_on_HWE_occ=float(occ)/HWE_occ
-                     if ratio_obs_on_HWE_occ<=0.5:
-                        hwe_color="blue"
-                     elif ratio_obs_on_HWE_occ>=2.0:
-                        hwe_color="red"
+                     if ratio_obs_on_HWE_occ<=(1.0/HWE_fold_change):
+                        hwe_color=deficit_color
+                     elif ratio_obs_on_HWE_occ>=(HWE_fold_change):
+                        hwe_color=excess_color
                      else:
-                        hwe_color="grey"
+                        hwe_color=default_color
 
                   ### Fill list $i that will be stacked with the others list
                   if not i in dict_SFS_profile_occ:
@@ -331,13 +338,13 @@ def get_dict_for_SFS_plot_with_genotypes_profile(individuals,dict_SFS,max_profil
             ### Fill list $i that will be stacked with the others list
             if not i in dict_SFS_profile_occ:
                dict_SFS_profile_occ[i]=list()
-            dict_SFS_profile_occ[i].append(OCC(0,0,colors[i],"grey"))
+            dict_SFS_profile_occ[i].append(OCC(0,0,colors[i],default_color))
             i+=1
          ##############
          ### SET "OTHERS" CATEGROY
          ##############
          occ_others=occ_tot-stacked_occ
-         HWE_others_occ,hwe_others_color=HWE_others_occ_color(low,dict_HWE_altNb_cat,altNb,occ_others,occ_tot)
+         HWE_others_occ,hwe_others_color=HWE_others_occ_color(low,dict_HWE_altNb_cat,altNb,occ_others,occ_tot,default_color,excess_color,deficit_color)
          if not i in dict_SFS_profile_occ:
             dict_SFS_profile_occ[i]=list()
          dict_SFS_profile_occ[i].append(OCC(occ_others,HWE_others_occ,colors[i],hwe_others_color))
@@ -350,14 +357,14 @@ def get_dict_for_SFS_plot_with_genotypes_profile(individuals,dict_SFS,max_profil
             ### Fill list $i that will be stacked with the others list
             if not i in dict_SFS_profile_occ:
                dict_SFS_profile_occ[i]=list()
-            dict_SFS_profile_occ[i].append(OCC(0,0,colors[i],"grey"))
+            dict_SFS_profile_occ[i].append(OCC(0,0,colors[i],default_color))
             i+=1
          ##############
          ### SET "OTHERS" CATEGORY
          ##############
          if not i in dict_SFS_profile_occ:
             dict_SFS_profile_occ[i]=list()
-         dict_SFS_profile_occ[i].append(OCC(0,0,colors[i],"grey"))
+         dict_SFS_profile_occ[i].append(OCC(0,0,colors[i],default_color))
 
       dict_SFS_profile_name[altNb]=list_profiles_names
 
@@ -429,7 +436,7 @@ def print_SFS_gt_profiles_legend(Wrect,dict_SFS_profile_name,ax_legend,yinit,leg
 
 
 
-def SFS_plot_genotypes_profiles(individuals_number,dict_SFS_profile_occ,dict_SFS_profile_name,max_profiles,low,OUTPUT):
+def SFS_plot_genotypes_profiles(individuals_number,dict_SFS_profile_occ,dict_SFS_profile_name,max_profiles,low,default_color,excess_color,deficit_color,OUTPUT):
    ### Set legend parameters
    max_lines_per_column=(max_profiles+2)*4
    colNb=get_legend_col_nb(dict_SFS_profile_name,max_lines_per_column,individuals_number)
@@ -558,9 +565,9 @@ def SFS_plot_genotypes_profiles(individuals_number,dict_SFS_profile_occ,dict_SFS
       # ax_plot1.set_yticks(fontsize=24)
       ax_plot2.set_ylim(ymin=0)
       ### Hardy-Weinberg Equilibrium comparison legend 
-      rect1=Line2D([],[],marker="s",markersize=10,linewidth=0,color="red")
-      rect2=Line2D([],[],marker="s",markersize=10,linewidth=0,color="grey")
-      rect3=Line2D([],[],marker="s",markersize=10,linewidth=0,color="blue")
+      rect1=Line2D([],[],marker="s",markersize=10,linewidth=0,color=excess_color)
+      rect2=Line2D([],[],marker="s",markersize=10,linewidth=0,color=default_color)
+      rect3=Line2D([],[],marker="s",markersize=10,linewidth=0,color=deficit_color)
       ax_plot2.legend([rect1,rect2,rect3],['Excess','Equilibrium','Deficit'])
 
    ### Write output plot

@@ -9,6 +9,7 @@ For example, **"0/1,1/1,0/1,0/1"** is the genotype profile corresponding to the 
 ```
 Dst_b1v03_scaf00008 54329 . G A 1970.68 PASS AC=6;AF=0.500;AN=12;BaseQRankSum=-6.140e-01;ClippingRankSum=0.00;DP=144;ExcessHet=4.8280;FS=6.723;MLEAC=5;MLEAF=0.417;MQ=60.00;MQRankSum=0.00;QD=15.28;ReadPosRankSum=-8.460e-01;SOR=0.440 GT:AD:DP:GQ:PL 0/1:16,22:38:99:558,0,409 1/1:1,11:12:3:309,3,0 0/1:26,28:54:99:750,0,617 0/1:8,11:19:99:286,0,203
 ```
+Where individuals 1, 3 and 4 are heterozygote ("0/1") and individual 3 is homozygote for the alternative allele ("1/1") for this site.
 
 Pop-Con takes as input a VCF file and uses the **cyvcf2** python package [2] to read and parse the VCF file
  To be readable and parsable by **cyvcf2** the VCf file has to be compressed and indexed with one of the 2 following command lines:
@@ -33,12 +34,12 @@ For each filtering combination ("read coverage" + "minor allele read frequency")
 2. with all sites where at least 1 individual is genotyped and passed read coverage and minor allele read frequency filtering.
 
 For figure 1, two plots are produced:
-* an upper plot representing the observed proportion of the **X** most represented genotype profiles for each SFS pic (**X** is set with the `--max_profiles` option)
-* a lower plot representing for each pic the expected proportion of genotype profile under the Hardy-Weinberg equilibrium. Genotype profiles are colored in red if observed genotype profile is 2 times upper Hardy-Weinberg expectation, blue if 2 times lower and grey if at equilibrum (between 2 times upper and 2 times lower).
+* an upper plot representing the observed proportion of the **X** most represented genotype profiles for each SFS pic (**X** is set with the `-max/--max_profiles` option)
+* a lower plot representing for each pic the expected proportion of genotype profile under the Hardy-Weinberg equilibrium. Genotype profiles are colored in red if observed genotype profile is **Y** times upper Hardy-Weinberg expectation, blue if **Y** times lower and white if at equilibrum (between **Y** times upper and **Y** times lower). Where **Y** is set with the option `-fold/--hwe_fold_change`
 
-For figure 2, only SFS plot with observed genotype profiles proportion is produced. This plot can be used to detect abnormal porpotion of low read coverage, low minor allele read frequency or ungenotyped individuals.
+For figure 2, only SFS plot with observed genotype profiles proportion is produced. This plot can be used to detect abnormal porpotion of low read coverage, low minor allele read frequency or ungenotyped individuals but display is not satisfying for now...
 
-Pop-Con is supported on Linux with python2 (version==2.7) and python3 (versions>=3.4).
+Pop-Con is supported on Linux with python2 (version==2.7) and python3 (versions>=3.4) and surely supported on Macintosh and Windows with the pypi python packages manager but not tested. 
 
 
 INSTALLATION
@@ -77,12 +78,12 @@ https://github.com/brentp/cyvcf2
 USAGE
 -----
 ```
-usage: Pop-Con [-h] -i VCF_FILE
+usage: Pop-Con [-h] -i VCF_FILE [-t VARIANT_CALLER]
                [-r READ_COVERAGE_THRESHOLD [READ_COVERAGE_THRESHOLD ...]]
                [-m MARFT [MARFT ...]] [-f VARIANT_CALLER_FILTERING]
-               [-fmono MONOMORPH_FILTERING] [-t VARIANT_CALLER] [-p PREFIX]
-               [-v VERBOSE] [-o OUTPUT_DIR] [-hf WRITE_HETEROZYGOSITY_FILE]
-               [-sep SEP] [-max MAX_PROFILES]
+               [-fmono MONOMORPH_FILTERING] [-p PREFIX] [-v VERBOSE]
+               [-o OUTPUT_DIR] [-hf WRITE_HETEROZYGOSITY_FILE] [-sep SEP]
+               [-max MAX_PROFILES] [-fold HWE_FOLD_CHANGE]
 
 Pop-Con - A tool for Population genomic Conflicts detection.
 
@@ -91,24 +92,24 @@ optional arguments:
   -i VCF_FILE, --input_file VCF_FILE
                         Variant Calling Format file containing variant calling
                         data.
+  -t VARIANT_CALLER, --tool VARIANT_CALLER
+                        Variant calling tool used to call variant. Values:
+                        "read2snp" or "GATK". (Default: "GATK")
   -r READ_COVERAGE_THRESHOLD [READ_COVERAGE_THRESHOLD ...], --read READ_COVERAGE_THRESHOLD [READ_COVERAGE_THRESHOLD ...]
                         List of read coverage threshold filtering for each
                         genotype. Values range: [0,infinity[. (Default: 0)
   -m MARFT [MARFT ...], --marft MARFT [MARFT ...]
-                        List of Minor Allele Read Frequency threshold for
-                        heterozygote genotypes filtering. Values range:
+                        List of Minor Allele Read Frequency (MARF) threshold
+                        for heterozygous genotypes filtering. Values range:
                         [0.0,0.5]. (Default: 0.0)
   -f VARIANT_CALLER_FILTERING, --variant_caller_filtering VARIANT_CALLER_FILTERING
                         Boolean to set if variant caller filtering is consider
                         or not. (if "True", sites with TAG column are not
                         empty are filtered out from analysis). (Default: True)
   -fmono MONOMORPH_FILTERING, --monomorph_filtering MONOMORPH_FILTERING
-                        Boolean to set if monomorph have to be filtered out.
-                        (if "True", monomorph sites will be filtered out from
-                        analysis). (Default: True)
-  -t VARIANT_CALLER, --tool VARIANT_CALLER
-                        Variant calling tool used to call variant. Values:
-                        "read2snp" or "GATK". (Default: "GATK")
+                        Boolean to filter out monomorph sites. ("True":
+                        monomorph sites are filtered out from analysis. Reduce
+                        drastically the execution time!!!). (Default: True)
   -p PREFIX, --prefix PREFIX
                         Experiment name (used as prefix for output files).
                         (Default: "exp1")
@@ -119,16 +120,22 @@ optional arguments:
   -hf WRITE_HETEROZYGOSITY_FILE, --heterozygosity_file WRITE_HETEROZYGOSITY_FILE
                         Boolean to set if the heterozygosity files
                         (summarizing VCF file for each combination of read
-                        coverage and MARF threshold filtering) have to be
-                        written or not. (Default: True)
+                        coverage and MARF filtering) have to be written or
+                        not. File used by script
+                        "scripts/plot_SFS_geneotype_profiles.py" to plot SFS
+                        without re-parsing VCF file. (Default: True)
   -sep SEP, --separator SEP
                         Separator used in genotype profiles. (Default: ",")
   -max MAX_PROFILES, --max_profiles MAX_PROFILES
                         Maximum number of genotype profiles displayed in SFS
                         plot. (Default: 10)
+  -fold HWE_FOLD_CHANGE, --hwe_fold_change HWE_FOLD_CHANGE
+                        Fold change value to define when an observed genotype
+                        profile proportion is in excess/deficit compare to the
+                        expected value under Hardy-Weinberg Equilibrium.
+                        (Default: 2.0)
 
 Source code and manual: http://github.com/YoannAnselmetti/Pop-Con
-
 ```
 
 EXAMPLE
@@ -148,19 +155,19 @@ Below the architecture of the output directory *"example/results/Lineus_longissi
 ```
 example/results/Lineus_longissimus/
 └── SNP
-	├── heterozygosity
-	│   └── heterozygosity_allFilter_Lineus_longissimus.tab
-	└── MARFt0.0
-		├── heterozygosity
-		│	└── read0
-		│		├── genotype_profiles_distrib_read0_Lineus_longissimus_SNP_MARFt0.0.tab
-		│	    ├── genotype_profiles_per_altNb_read0_Lineus_longissimus_SNP_MARFt0.0_max20_with_all_positions.tab
-		│		├── genotype_profiles_per_altNb_read0_Lineus_longissimus_SNP_MARFt0.0_max20_with_positions_with_all_individuals_genotyped.tab
-		│		└── heterozygosity_read0_Lineus_longissimus_SNP_MARFt0.0.tab
-		└── SFS_profiles
-			└── read0
-				├── SFSplot_genotypes_profiles_read0_Lineus_longissimus_SNP_MARFt0.0_max20_all_positions.pdf
-				└── SFSplot_genotypes_profiles_read0_Lineus_longissimus_SNP_MARFt0.0_max20.pdf
+    ├── heterozygosity
+    │   └── heterozygosity_allFilter_Lineus_longissimus.tab
+    └── MARFt0.0
+        ├── heterozygosity
+        │	  └── read0
+        │		    ├── genotype_profiles_distrib_read0_Lineus_longissimus_SNP_MARFt0.0.tab
+        │	      ├── genotype_profiles_per_altNb_read0_Lineus_longissimus_SNP_MARFt0.0_max20_with_all_positions.tab
+        │		    ├── genotype_profiles_per_altNb_read0_Lineus_longissimus_SNP_MARFt0.0_max20_with_positions_with_all_individuals_genotyped.tab
+        │		    └── heterozygosity_read0_Lineus_longissimus_SNP_MARFt0.0.tab
+        └── SFS_profiles
+            └── read0
+                ├── SFSplot_genotypes_profiles_read0_Lineus_longissimus_SNP_MARFt0.0_max20_all_positions.pdf
+                └── SFSplot_genotypes_profiles_read0_Lineus_longissimus_SNP_MARFt0.0_max20.pdf
 ```
 
 The 2 SFS plot with genotype profiles produced:
@@ -198,7 +205,7 @@ Traceback (most recent call last):
     str_coverage=str(variant).split()[x].split(":")[1]
 IndexError: list index out of range
 ```
-Pop-Con was only tested on VCF files produced by *GATK* or *read2snp*. If you used others varaiant caller tool and encountered can you please write an issue. I'll try to shortly produce a new module for the VCF of this variant caller.
+This error can also arise if you used an other variant caller tool than *GATK* or *read2snp* as Pop-Con was only tested on VCF files produced by those. If you encountered such problem can you please write an issue, I'll try to shortly produce a new module to parse the VCF produced by the variant caller you used.
 
 
 MISCELLANEOUS

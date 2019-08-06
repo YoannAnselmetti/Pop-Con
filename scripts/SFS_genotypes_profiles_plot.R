@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 ###
-###   GOAL: Draw SFS plot with genotype profiles
+###   GOAL: Draw SFS plot with genotype profiles from genotypes file produced by Pop-Con
 ###      
 ###   INPUT:
 ###      1- INPUT file: Genotype profiles file
@@ -20,7 +20,9 @@
 ###      - SFS plot with genotypes profiles
 ###
 ###   Name: SFS_genotypes_profiles_plot.R   Author: Thibault Leroy + Yoann Anselmetti
-###   Creation date: 2018/11/13             Last modification: 2019/07/04
+###   Creation date: 2018/11/13             Last modification: 2019/08/06
+###
+###   License: This software is distributed under the CeCILL free software license (Version 2.1 dated 2013-06-21)
 ###
 
 library(ggplot2)

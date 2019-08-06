@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
    name='Pop-Con',
-   version='1.0.1',
+   version='1.0.2',
    packages=find_packages(),
    classifiers=[
       "Development Status :: 4 - Beta",

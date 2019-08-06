@@ -40,6 +40,7 @@ parser.add_argument('-o', "--output", dest='output_dir', type=str, default=".", 
 ### SFS plot
 parser.add_argument('-sep', "--separator", dest='sep', type=str, default=",", help='Separator used in genotype profiles. (Default: ",")')
 parser.add_argument('-max', "--max_profiles", dest='max_profiles', type=int, default=10, help='Maximum number of genotype profiles displayed in SFS plot. (Default: 10)')
+parser.add_argument('-fold', "--hwe_fold_change", dest='hwe_fold_change', type=float, default=2.0, help='Fold change value to define when an observed genotype profile proportion is in excess/deficit compare to the expected value under Hardy-Weinberg Equilibrium. (Default: 2.0)')
 
 
 
@@ -58,11 +59,16 @@ if __name__ == '__main__':
    variant_type=args.variant_type
 
    prefix=args.prefix
-   OUTPUT=args.output_dir
-
    verbose=args.verbose
+   OUTPUT=args.output_dir
+   
    sep=args.sep
    max_profiles=args.max_profiles
+   HWE_fold_change=args.hwe_fold_change
+
+
+   ### HWE comparison colors
+   default_color,excess_color,deficit_color="white","red","blue"
 
    util.mkdir_p(OUTPUT)
 
@@ -81,16 +87,16 @@ if __name__ == '__main__':
       if verbose>=1:
          print('\t\tB/ Plot SFS with genotypes profiles:')
          print('\t\t\ta/ Case for positions where all individuals are genotyped and passed "read coverage+minor allele read frequency" filtering step')
-      dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT,max_profiles,False,verbose)
+      dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT,max_profiles,False,HWE_fold_change,default_color,excess_color,deficit_color,verbose)
       output_SFS_plot=OUTPUT+'/'+prefix+'_max'+str(max_profiles)+'.pdf'
-      SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,False,output_SFS_plot)
+      SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,False,default_color,excess_color,deficit_color,output_SFS_plot)
    
       ### Case for all positions (same positions filtered out)
       if verbose>=1:
          print('\t\t\tb/ Case for all positions (same positions "read coverage+minor allele read frequency" filtered out)')
-      dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos,max_profiles,True,verbose)
+      dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos,max_profiles,True,HWE_fold_change,default_color,excess_color,deficit_color,verbose)
       output_SFS_plot=OUTPUT+'/'+prefix+'_max'+str(max_profiles)+'_all_positions.pdf'
-      SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,True,output_SFS_plot)
+      SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,True,default_color,excess_color,deficit_color,output_SFS_plot)
    #########
    ### For indel
    #########
@@ -110,9 +116,9 @@ if __name__ == '__main__':
          util.mkdir_p(SFSplot_DIR)
          if verbose>=1:
             print('\t\t\t\tIndel size interval "'+indel_size_interval+'"')
-         dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT[indel_size_interval],max_profiles,False,verbose)
+         dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT[indel_size_interval],max_profiles,False,HWE_fold_change,default_color,excess_color,deficit_color,verbose)
          output_SFS_plot=SFSplot_DIR+'/'+prefix+'_max'+str(max_profiles)+'.pdf'
-         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,False,output_SFS_plot)
+         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,False,default_color,excess_color,deficit_color,output_SFS_plot)
 
       ### Case for all positions (same positions filtered out)
       if verbose>=1:
@@ -122,9 +128,9 @@ if __name__ == '__main__':
          util.mkdir_p(SFSplot_DIR)
          if verbose>=1:
             print('\t\t\t\tIndel size interval "'+indel_size_interval+'"')
-         dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos[indel_size_interval],max_profiles,True,verbose)
+         dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos[indel_size_interval],max_profiles,True,HWE_fold_change,default_color,excess_color,deficit_color,verbose)
          output_SFS_plot=SFSplot_DIR+'/'+prefix+'_max'+str(max_profiles)+'_all_positions.pdf'
-         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,True,output_SFS_plot)
+         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,True,default_color,excess_color,deficit_color,output_SFS_plot)
    else:
       exit('\nERROR, variant type (option "-var/--variant_type") should be equal to "SNP" or "indel" and not "'+variant_type+'"!!!\n')
 

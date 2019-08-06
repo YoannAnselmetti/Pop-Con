@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 ###
 ###   Author:              Yoann Anselmetti
-###   Last modification:   2019/07/31
+###   Last modification:   2019/08/06
 ###
 ###   Goal: Read and parse a Variant Calling Format (VCF) file to:
 ###      - compute general heterozygosity statistics on population genomics data
@@ -313,26 +313,26 @@ def write_gt_occ_and_set_dict_SFS(bool_INDEL,dict_GT,PROFILES,sep):
 ###   PARAMETERS   ###
 ######################
 
-parser = argparse.ArgumentParser(prog='Pop-Con', description='Pop-Con - A tool for Population genomic Conflicts detection.', epilog='''Source code and manual: http://github.com/YoannAnselmetti/Pop-Con\n\n''', formatter_class=argparse.RawDescriptionHelpFormatter)
+parser = argparse.ArgumentParser(prog='Pop-Con', description='Pop-Con - A tool to plot SFS with genotype profiles for detection of unexpected population genotype patterns.', epilog='''Source code and manual: http://github.com/YoannAnselmetti/Pop-Con\n\n''', formatter_class=argparse.RawDescriptionHelpFormatter)
 ## REQUIRED
 parser.add_argument('-i', "--input_file", dest='vcf_file', type=str, required=True, help='Variant Calling Format file containing variant calling data.')
-## FILTERING
-parser.add_argument('-r', "--read", dest='read_coverage_threshold', type=int, default=[0], nargs='+', help='List of read coverage threshold filtering for each genotype.\nValues range: [0,infinity[. (Default: 0)')
-parser.add_argument('-m', "--marft", dest='marft', type=float, default=[0.0], nargs='+', help='List of Minor Allele Read Frequency threshold for heterozygote genotypes filtering.\nValues range: [0.0,0.5]. (Default: 0.0)')
-parser.add_argument('-f', "--variant_caller_filtering", dest='variant_caller_filtering', type=bool, default=True, help='Boolean to set if variant caller filtering is consider or not. (if \"True\", sites with TAG column are not empty are filtered out from analysis). (Default: True)')
-parser.add_argument('-fmono', "--monomorph_filtering", dest='monomorph_filtering', type=bool, default=True, help='Boolean to set if monomorph have to be filtered out. (if \"True\", monomorph sites will be filtered out from analysis). (Default: True)')
 ## OPTIONAL
 ### variant caller 
 parser.add_argument('-t', "--tool", dest='variant_caller', type=str, default='GATK', help='Variant calling tool used to call variant.\nValues: "read2snp" or "GATK". (Default: "GATK")')
+## FILTERING
+parser.add_argument('-r', "--read", dest='read_coverage_threshold', type=int, default=[0], nargs='+', help='List of read coverage threshold filtering for each genotype.\nValues range: [0,infinity[. (Default: 0)')
+parser.add_argument('-m', "--marft", dest='marft', type=float, default=[0.0], nargs='+', help='List of Minor Allele Read Frequency (MARF) threshold for heterozygous genotypes filtering.\nValues range: [0.0,0.5]. (Default: 0.0)')
+parser.add_argument('-f', "--variant_caller_filtering", dest='variant_caller_filtering', type=bool, default=True, help='Boolean to set if variant caller filtering is consider or not. (if \"True\", sites with TAG column are not empty are filtered out from analysis). (Default: True)')
+parser.add_argument('-fmono', "--monomorph_filtering", dest='monomorph_filtering', type=bool, default=True, help='Boolean to filter out monomorph sites. (\"True\": monomorph sites are filtered out from analysis. Reduce drastically the execution time!!!). (Default: True)')
 ### output
 parser.add_argument('-p', "--prefix", dest='prefix', type=str, default='exp1', help='Experiment name (used as prefix for output files). (Default: "exp1")')
 parser.add_argument('-v', "--verbose", dest='verbose', type=int, default=1, help='Verbose intensity. (Default: 1)')
 parser.add_argument('-o', "--output", dest='output_dir', type=str, default=".", help='Output directory path. (Default: ./)')
-parser.add_argument('-hf', "--heterozygosity_file", dest='write_heterozygosity_file', type=bool, default=True, help='Boolean to set if the heterozygosity files (summarizing VCF file for each combination of read coverage and MARF threshold filtering) have to be written or not. (Default: True)')
+parser.add_argument('-hf', "--heterozygosity_file", dest='write_heterozygosity_file', type=bool, default=True, help='Boolean to set if the heterozygosity files (summarizing VCF file for each combination of read coverage and MARF filtering) have to be written or not. File used by script "scripts/plot_SFS_geneotype_profiles.py" to plot SFS without re-parsing VCF file. (Default: True)')
 ### SFS plot
 parser.add_argument('-sep', "--separator", dest='sep', type=str, default=",", help='Separator used in genotype profiles. (Default: ",")')
 parser.add_argument('-max', "--max_profiles", dest='max_profiles', type=int, default=10, help='Maximum number of genotype profiles displayed in SFS plot. (Default: 10)')
-
+parser.add_argument('-fold', "--hwe_fold_change", dest='hwe_fold_change', type=float, default=2.0, help='Fold change value to define when an observed genotype profile proportion is in excess/deficit compare to the expected value under Hardy-Weinberg Equilibrium. (Default: 2.0)')
 
 
 ################
@@ -352,19 +352,26 @@ if __name__ == '__main__':
    args = parser.parse_args()
 
    vcf_file=args.vcf_file
-   prefix=args.prefix
+
    variant_caller=args.variant_caller
 
-   OUTPUT=args.output_dir
-   list_MARFt=args.marft
    list_read_coverage_threshold=args.read_coverage_threshold
-
+   list_MARFt=args.marft
    use_variant_caller_filter=args.variant_caller_filtering
-   write_heterozygosity_file=args.write_heterozygosity_file
+   monomorph_filtering=args.monomorph_filtering
+
+   prefix=args.prefix
    verbose=args.verbose
+   OUTPUT=args.output_dir
+   write_heterozygosity_file=args.write_heterozygosity_file
+   
    sep=args.sep
    max_profiles=args.max_profiles
-   monomorph_filtering=args.monomorph_filtering
+   HWE_fold_change=args.hwe_fold_change
+
+
+   ### HWE comparison colors
+   default_color,excess_color,deficit_color="white","red","blue"
 
 
    if variant_caller=='read2snp':
@@ -433,15 +440,15 @@ if __name__ == '__main__':
          ### Case for positions where all individuals are genotyped and passed filtering step
          if verbose>=1:
             print('\t\t\t\t\ta/ Case for positions where all individuals are genotyped and passed "read coverage+minor allele read frequency" filtering step')
-         dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT,max_profiles,False,verbose)         
+         dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT,max_profiles,False,HWE_fold_change,default_color,excess_color,deficit_color,verbose)
          output_SFS_plot=SFSplot_DIR+'/SFSplot_genotypes_profiles_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'.pdf'
-         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,False,output_SFS_plot)
+         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,False,default_color,excess_color,deficit_color,output_SFS_plot)
          ### Case for all positions (same positions filtered out)
          if verbose>=1:
             print('\t\t\t\t\tb/ Case for all positions (same positions "read coverage+minor allele read frequency" filtered out)')
-         dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos,max_profiles,True,verbose)
+         dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos,max_profiles,True,HWE_fold_change,default_color,excess_color,deficit_color,verbose)
          output_SFS_plot=SFSplot_DIR+'/SFSplot_genotypes_profiles_read'+str(read_coverage_threshold)+'_'+prefix+'_SNP_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'_all_positions.pdf'
-         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,True,output_SFS_plot)
+         SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,True,default_color,excess_color,deficit_color,output_SFS_plot)
 
          ########
          ### Write SFS plot with genotypes profiles input file for R script
@@ -480,9 +487,9 @@ if __name__ == '__main__':
                util.mkdir_p(SFSplot_DIR)
                if verbose>=1:
                   print('\t\t\t\t\t\tIndel size interval "'+indel_size_interval+'"')
-               dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT[indel_size_interval],max_profiles,False,verbose)
+               dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allIndGT[indel_size_interval],max_profiles,False,HWE_fold_change,default_color,excess_color,deficit_color,verbose)
                output_SFS_plot=SFSplot_DIR+'/SFSplot_genotypes_profiles_read'+str(read_coverage_threshold)+'_'+prefix+'_indel_'+indel_size_interval+'_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'.pdf'
-               SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,False,output_SFS_plot)
+               SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allIndGT_profile_occ,dict_SFS_allIndGT_profile_name,max_profiles,False,default_color,excess_color,deficit_color,output_SFS_plot)
             if verbose>=1:
                print('\t\t\t\t\tb/ Case for all positions (same positions filtered out):')
             for indel_size_interval in dict_SFS_allPos:
@@ -490,9 +497,9 @@ if __name__ == '__main__':
                util.mkdir_p(SFSplot_DIR)
                if verbose>=1:
                   print('\t\t\t\t\t\tIndel size interval "'+indel_size_interval+'"')
-               dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos[indel_size_interval],max_profiles,True,verbose)
+               dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name=SFS_profiles_plot.get_dict_for_SFS_plot_with_genotypes_profile(individuals_number,dict_SFS_allPos[indel_size_interval],max_profiles,True,HWE_fold_change,default_color,excess_color,deficit_color,verbose)
                output_SFS_plot=SFSplot_DIR+'/SFSplot_genotypes_profiles_read'+str(read_coverage_threshold)+'_'+prefix+'_indel_'+indel_size_interval+'_MARFt'+str(MARFt)+'_max'+str(max_profiles)+'_all_positions.pdf'
-               SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,True,output_SFS_plot)
+               SFS_profiles_plot.SFS_plot_genotypes_profiles(individuals_number,dict_SFS_allPos_profile_occ,dict_SFS_allPos_profile_name,max_profiles,True,default_color,excess_color,deficit_color,output_SFS_plot)
 
             ########
             ### Write SFS plot with genotypes profiles input file for R script
