@@ -16,7 +16,7 @@ import matplotlib.cm as cm
 from matplotlib import pyplot as plt
 from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
-import matplotlib.patches as mpatches
+from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D
 
 ### home-made package
@@ -429,7 +429,7 @@ def print_SFS_gt_profiles_legend(Wrect,dict_SFS_profile_name,ax_legend,yinit,leg
          ### LEGEND
          ############
          # Add a rectangle
-         rect=mpatches.Rectangle([xdec,ydec-(.05*ypad)],Wrect,Hrect,color=color)
+         rect=Rectangle((xdec,ydec-(.05*ypad)),Wrect,Hrect,alpha=1,color=color,ec="black",lw=Wrect/10.0)
          ax_legend.add_patch(rect)
          ### Add text for each square
          ax_legend.text(x=xdec+(1.5*Wrect),y=ydec,s=gt_profile,fontsize=legendfontsize)
@@ -565,9 +565,9 @@ def SFS_plot_genotypes_profiles(individuals_number,dict_SFS_profile_occ,dict_SFS
       # ax_plot1.set_yticks(fontsize=24)
       ax_plot2.set_ylim(ymin=0)
       ### Hardy-Weinberg Equilibrium comparison legend 
-      rect1=Line2D([],[],marker="s",markersize=10,linewidth=0,color=excess_color)
-      rect2=Line2D([],[],marker="s",markersize=10,linewidth=0,color=default_color)
-      rect3=Line2D([],[],marker="s",markersize=10,linewidth=0,color=deficit_color)
+      rect1=Line2D([],[],marker="s",markeredgecolor="black",markeredgewidth=.5,markersize=10,linewidth=0,color=excess_color)
+      rect2=Line2D([],[],marker="s",markeredgecolor="black",markeredgewidth=.5,markersize=10,linewidth=0,color=default_color)
+      rect3=Line2D([],[],marker="s",markeredgecolor="black",markeredgewidth=.5,markersize=10,linewidth=0,color=deficit_color)
       ax_plot2.legend([rect1,rect2,rect3],['Excess','Equilibrium','Deficit'])
 
    ### Write output plot
