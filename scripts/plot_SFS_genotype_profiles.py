@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
 
    ### HWE comparison colors
-   default_color,excess_color,deficit_color="white","red","blue"
+   default_color,excess_color,deficit_color="silver","red","blue"
 
    util.mkdir_p(OUTPUT)
 
