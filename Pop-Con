@@ -288,7 +288,8 @@ def write_heterozygosity_summary(dict_SNP_FIS_allIndGT,dict_SNP_FIS_allPos, \
 \tpos_1IndGT\tpos_1IndGT\tpos_allIndGT\tpos_allIndGT\tpos_allIndGT \
 \tpos_allIndGT\tpos_allIndGT\tpos_allIndGT\tpos_allIndGT\tpos_allIndGT\n')
    output_file_allfilt.write('prefix\tMRCt\tMARFt\t#total\t#indel\t#N\t \
-#total\t#monomorph\t#SNP\t#(0/0)\t#(0/1)\t#(1/1)\tHetero(Obs)\tHetero(Exp) \
+#variant_calling_filtered\t#single_position\t#MRCt_MARFt_noGT_filtered\t \
+#total\t#monomorph\t#SNP\t#(0/0)\t#(0/1)\t#(1/1)\tHetero(Obs)\tHetero(Exp)\t \
 #total\t#monomorph\t#SNP\t#(0/0)\t#(0/1)\t#(1/1)\tHetero(Obs)\tHetero(Exp)\n')
    for MRCt in sorted(dict_hetero):
       dictHETERO_allPos[MRCt]=dict()
