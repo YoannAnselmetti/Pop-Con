@@ -1,9 +1,10 @@
-###
-###   Author:              Yoann Anselmetti
-###   Last modification:   2019/08/06
-###
-###   License: This software is distributed under the CeCILL free software license (Version 2.1 dated 2013-06-21)
-###
+"""
+Author:              Yoann Anselmetti
+Last modification:   2019/11/26
+
+License: This software is distributed under the CeCILL free software license
+         (Version 2.1 dated 2013-06-21)
+"""
 
 from math import pow,ceil
 from collections import OrderedDict,namedtuple   #New in version 2.6
@@ -171,74 +172,42 @@ def store_indel_genotypes_file(GENOTYPES,sep,verbose):
 
 
 
-
-
-
+########
+#### 
+########
 def store_SNP_genotypes_file(GENOTYPES,sep,verbose):
-   step,y,x=100000,0,0
-   dict_genotypes=dict()
    genotype_file=open(GENOTYPES,"r")
    individuals_number=0
-   for line in genotype_file:
-      if "#chromosome/scaffold" in line:
-         individuals_number=len(line.split())-5
-      else:
-         columns=len(line.split())
-         z,genotypes=0,""
-         while 5+z<columns:
-            col=line.split()[5+z]
-            if not genotypes:
-               if "low" in col:
-                  genotypes+=(col.split(":")[0]+":"+col.split(":")[1])
-               elif ":" in col:
-                  genotypes+=col.split(":")[0]
-               else:
-                  genotypes+=col
-            else:
-               if "low" in col:
-                  genotypes+=(sep+col.split(":")[0]+":"+col.split(":")[1])
-               elif ":" in col:
-                  genotypes+=(sep+col.split(":")[0])
-               else:
-                  genotypes+=(sep+col)
-            z+=1
-         if not genotypes in dict_genotypes:
-            dict_genotypes[genotypes]=0
-         dict_genotypes[genotypes]+=1
-
-
-   # output_full_distrib_file=open(PROFILES,"w")
    dict_SFS_allIndGT,dict_SFS_allPos=dict(),dict()
-   for gt in OrderedDict(sorted(dict_genotypes.items(), key=lambda t: t[1], reverse=True)):
-      # Get list of genotype profiles with occurences / SFS value 
-      occ=dict_genotypes[gt]
+   for line in genotype_file:
+      occ=int(line.split()[0])
+      gt_profile=line.split()[1]
 
-      # ### Write genotypes profiles distribution (with lowCov, lowMARFt and "./." genotypes)
-      # output_full_distrib_file.write(str(occ)+"\t"+gt+"\n")
+      ### Get number of individuals
+      if not individuals_number:
+         individuals_number=len(gt_profile.split(sep))
 
-      ### Set SFS dictionary for all positions with at least 1 individual is genotyped
-      altNb=get_alt_nb(gt,sep,True)
+      ### Set SFS dictionary for all positions where
+      ### at least 1 individual is genotyped (and passed filters)
+      altNb=get_alt_nb(gt_profile,sep,True)
       if altNb>0:
          if not altNb in dict_SFS_allPos:
             dict_SFS_allPos[altNb]=dict()
          if not occ in dict_SFS_allPos[altNb]:
             dict_SFS_allPos[altNb][occ]=list()
-         dict_SFS_allPos[altNb][occ].append(gt)
+         dict_SFS_allPos[altNb][occ].append(gt_profile)
 
-      ### Set SFS dictionary for positions where all individuals are genotyped
-      altNb=get_alt_nb(gt,sep,False)
+      ### Set SFS dictionary for positions where
+      ### all individuals are genotyped (and passed filters)
+      altNb=get_alt_nb(gt_profile,sep,False)
       if altNb>0:
          if not altNb in dict_SFS_allIndGT:
             dict_SFS_allIndGT[altNb]=dict()
          if not occ in dict_SFS_allIndGT[altNb]:
             dict_SFS_allIndGT[altNb][occ]=list()
-         dict_SFS_allIndGT[altNb][occ].append(gt)
-
-   # output_full_distrib_file.close()
+         dict_SFS_allIndGT[altNb][occ].append(gt_profile)
 
    return dict_SFS_allPos,dict_SFS_allIndGT,individuals_number
-
-
 
 
 
