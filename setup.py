@@ -25,7 +25,7 @@ setup(
    license='CeCILL-2.1',
    install_requires=[
       'matplotlib==2.2.4',
-      'numpy==1.16.4',
+      'numpy==1.22.0',
       'cyvcf2==0.11.4'
    ],
 )
